@@ -36,7 +36,7 @@ def conv2d_layer(h,     # activations from previous layer, shape = [height, widt
             kernel = W[:,:,i,j];
             
     # 4. Flip the kernel horizontally and vertically (since
-    #    We want to perform cross-correlation, not convolution.
+    #  e want to perform cross-correlation, not convolution.
     #    You can, e.g., look at np.flipud and np.fliplr
             kernel = np.fliplr(kernel)
             kernel = np.flipud(kernel)
@@ -64,7 +64,7 @@ def pool2d_layer(h):  # activations from conv layer, shape = [height, width, cha
     sy = int(h.shape[1]/2)
 
     # 2. Specify array to store output
-    ho = np.zeros((sx,sy,h.shape[2]))
+    ho = np.zeros((sx, sy, h.shape[2]))
 
     # 3. Perform pooling for each channel.
     #    You can, e.g., look at the measure.block_reduce() function
@@ -87,8 +87,6 @@ def dense_layer(h,   # Activations from previous layer
                 b,   # Bias vector
                 act  # Activation function
 ):
-
-    
     # TODO: implement the dense layer.
     # You can use the code from your implementation
     # in Lab 1. Make sure that the h vector is a [Kx1] array.
