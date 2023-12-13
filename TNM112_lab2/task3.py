@@ -1,0 +1,47 @@
+from tensorflow import keras
+from tensorflow.keras import layers
+import util
+import data_generator
+
+def conv_block(x, N, channels, kernel_size, activation, padding='same'):
+    for i in range(N):
+        x = layers.Conv2D(channels, kernel_size=kernel_size, activation=activation, padding=padding)(x)
+        #x = layers.Dropout(0.2)(x)
+    return layers.MaxPooling2D(pool_size=(2, 2))(x)
+    
+
+epochs = 10
+batch_size = 128
+
+# Load the PatchCamyleon dataset
+# In this dataset, we don't have labels for the test set.
+# Do your development by monitoring the validation performance,
+# and when you are finished you will run predictions on the test
+# set and produce a CSV file that you can upload to Kaggle.
+data = data_generator.DataGenerator()
+data.generate(dataset='patchcam')
+data.plot()
+
+keras.backend.clear_session()
+
+# TODO: Build your network here
+x       = layers.Input(shape=data.x_train.shape[1:])
+# aug_flp = 
+conv1   = conv_block(x, N=2, channels=8, kernel_size=(3,3), activation='relu', padding='same')
+conv2   = conv_block(conv1, N=2, channels=16, kernel_size=(3,3), activation='relu', padding='same')
+flat1   = layers.Flatten()(conv2)
+y       = layers.Dense(data.K, activation='softmax')(flat1)
+
+model = keras.models.Model(inputs=x, outputs=y)
+model.summary()
+
+opt = keras.optimizers.Adam()
+model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy','AUC'])
+log = model.fit(data.x_train, data.y_train_oh, batch_size=batch_size, epochs=epochs, 
+                validation_data=(data.x_valid, data.y_valid_oh), validation_freq=1,
+                verbose=True)
+
+util.evaluate(model, data)
+util.plot_training(log)
+
+# TODO: When you have finished y
