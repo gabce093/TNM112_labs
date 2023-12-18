@@ -1,17 +1,11 @@
 import os
 
+import keras.models
 from keras.src.applications.densenet import layers
-from keras.src.layers import Conv3D
 from keras.src.preprocessing.image import ImageDataGenerator
-from tensorflow import keras
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dropout, UpSampling2D
 import numpy as np
-import tensorflow as tf
-import scipy
-import numpy as np
-import cv2
-
+import matplotlib.pyplot as plt
 
 def random_cover(image):
     # Generate random coordinates for the top-left corner of the covered region
@@ -39,7 +33,7 @@ def pre_processing_org(image):
     return image
 
 
-image_size = (64, 64)
+image_size = (128, 128)
 
 datagen_cover = ImageDataGenerator(
     preprocessing_function=pre_processing,
@@ -69,17 +63,10 @@ org_data = datagen_org.flow_from_directory(
     shuffle=False,
 )
 
-#print(org_data[2000].shape)
-
 combined_data = zip(covered_data, org_data)
 
-# först bild
-# andra in och out
-# Batch
-# print(training_data[0][2][0].shape)
-
 model = Sequential([
-    layers.Conv2D(32, (3, 3), activation='relu', padding="same"),
+    layers.Conv2D(32, (3, 3), activation='relu', padding="same", input_shape=(image_size[0], image_size[1], 3)),
     layers.MaxPooling2D((2, 2), padding='same'),
     layers.Conv2D(64, (3, 3), activation='relu', padding="same"),
     layers.MaxPooling2D((2, 2), padding='same'),
@@ -99,18 +86,24 @@ model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
 steps_per_epoch = min(len(covered_data), len(org_data))
 
-model.fit(combined_data, epochs=1, steps_per_epoch=steps_per_epoch)
+#model.fit(combined_data, epochs=1, steps_per_epoch=steps_per_epoch)
+#model.save("128_org.keras")
 
-# model.evaluate(model, training_data[0])
+#model.evaluate(model, training_data[0])
+
+model = keras.models.load_model("128_org.keras")
 
 
-regenerated = model.predict(covered_data)
 
-import matplotlib.pyplot as plt
+#regenerated = model.predict(covered_data, steps=10)
 
 n = 10
 plt.figure(figsize=(20, 4))
+
 for i in range(n):
+    img_pair = next(combined_data)
+    destroyed = img_pair[0]
+    regenerated = model.predict(destroyed)[0]
     # Original image
     ax = plt.subplot(3, n, i + 1)
     plt.imshow(org_data[i][0])
@@ -120,18 +113,17 @@ for i in range(n):
 
     # Destroyed image
     ax = plt.subplot(3, n, i + n + 1)
-    plt.imshow(covered_data[i][0])
+    plt.imshow(destroyed[0])
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
     # Regenerated image
     ax = plt.subplot(3, n, i + 2 * n + 1)
-    plt.imshow(regenerated[i])
+    plt.imshow(regenerated)
     plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
 plt.show()
 
-model.save("test1.keras")
