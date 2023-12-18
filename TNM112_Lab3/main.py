@@ -1,3 +1,5 @@
+import os
+
 from keras.src.applications.densenet import layers
 from keras.src.layers import Conv3D
 from keras.src.preprocessing.image import ImageDataGenerator
@@ -8,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 import scipy
 import numpy as np
+import cv2
 
 
 def random_cover(image):
@@ -24,44 +27,56 @@ def random_cover(image):
 
     return image
 
+
 def pre_processing(image):
     image = random_cover(image)
     image /= 255.0
     return image
 
 
+def pre_processing_org(image):
+    image /= 255.0
+    return image
 
-datagen = ImageDataGenerator(
-    preprocessing_function=pre_processing,
-   # validation_split=0.2  # Split for validation if needed
-)
 
 image_size = (64, 64)
 
-covered_data = datagen.flow_from_directory(
+datagen_cover = ImageDataGenerator(
+    preprocessing_function=pre_processing,
+    # validation_split=0.2  # Split for validation if needed
+)
+
+datagen_org = ImageDataGenerator(
+    preprocessing_function=pre_processing_org,
+
+)
+
+covered_data = datagen_cover.flow_from_directory(
     directory='vegetable_images/train',
     target_size=image_size,
-    batch_size=10,
-    subset='training'
+    batch_size=1,
+    class_mode=None,
+    seed=None,
+    shuffle=False,
 )
 
-org_data = tf.keras.utils.image_dataset_from_directory(
+org_data = datagen_org.flow_from_directory(
     directory='vegetable_images/train',
-    labels=None,
-    image_size = image_size,
+    target_size=image_size,
+    batch_size=1,
+    class_mode=None,
+    seed=None,
+    shuffle=False,
 )
 
-normalization_layer = tf.keras.layers.Rescaling(1./255)
+#print(org_data[2000].shape)
 
-org_data = org_data.map(lambda x: (normalization_layer(x)))
-covered_data = org_data.map(lambda x: (normalization_layer(x)))
+combined_data = zip(covered_data, org_data)
 
-#x_data = np.concatenate(org_data, covered_data)
-
-#först bild
-#andra in och out
-#Batch
-#print(training_data[0][2][0].shape)
+# först bild
+# andra in och out
+# Batch
+# print(training_data[0][2][0].shape)
 
 model = Sequential([
     layers.Conv2D(32, (3, 3), activation='relu', padding="same"),
@@ -82,35 +97,41 @@ model = Sequential([
 
 model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
-model.fit(covered_data, org_data, epochs=1)
+steps_per_epoch = min(len(covered_data), len(org_data))
 
-#model.evaluate(model, training_data[0])
+model.fit(combined_data, epochs=1, steps_per_epoch=steps_per_epoch)
 
-regenerated = model.predict(training_data[0])
+# model.evaluate(model, training_data[0])
+
+
+regenerated = model.predict(covered_data)
 
 import matplotlib.pyplot as plt
-n = 5
+
+n = 10
 plt.figure(figsize=(20, 4))
 for i in range(n):
-  # Original image
-  ax = plt.subplot(3, n, i + 1)
-  plt.imshow(training_data[i][1][0])
-  plt.gray()
-  ax.get_xaxis().set_visible(False)
-  ax.get_yaxis().set_visible(False)
+    # Original image
+    ax = plt.subplot(3, n, i + 1)
+    plt.imshow(org_data[i][0])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 
-  # Destroyed image
-  ax = plt.subplot(3, n, i + n + 1)
-  plt.imshow(training_data[i][0][0])
-  plt.gray()
-  ax.get_xaxis().set_visible(False)
-  ax.get_yaxis().set_visible(False)
+    # Destroyed image
+    ax = plt.subplot(3, n, i + n + 1)
+    plt.imshow(covered_data[i][0])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 
-  # Regenerated image
-  ax = plt.subplot(3, n, i + 2*n + 1)
-  plt.imshow(regenerated[i])
-  plt.gray()
-  ax.get_xaxis().set_visible(False)
-  ax.get_yaxis().set_visible(False)
+    # Regenerated image
+    ax = plt.subplot(3, n, i + 2 * n + 1)
+    plt.imshow(regenerated[i])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 
 plt.show()
+
+model.save("test1.keras")
