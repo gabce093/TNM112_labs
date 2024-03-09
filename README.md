@@ -1,1 +1,1 @@
-###Labs from the course: Deep Learning for Media Technology
+### Labs from the course: Deep Learning for Media Technology
